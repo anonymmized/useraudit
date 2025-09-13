@@ -1,9 +1,40 @@
-#!/usr/bin/env bash
+#!/bin/bash
+#D
 set -euo pipefail
 
 platform_user_created=0
 
 die() { echo "❌ $*" >&2; exit 1; }
+
+validate_username() {
+    local name="${1-}"
+    local maxlen=32
+
+    [[ -n "$name" ]] || { echo "username: clear" >&2; return 1; }
+    if (( ${#name} > maxlen )); then    
+        echo "username: too long (>${maxlen})" >&2; return 1
+    fi
+
+    if [[ ! "$name" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+        echo "username: only [a-z0-9_-] are available, first - letter/_" >&2; return 1
+    fi
+
+    if [[ "$name" =~ ^[0-9]+$ ]]; then
+        echo "username: cannot consist only of numbers" >&2; return 1
+    fi
+
+    local reserved=(
+        root daemon bin sys sync mail news uucp operator games nobody nogroup
+        admin guest
+    )
+
+    for r in "${reserved[@]}"; do
+        [[ "$name" == "$r" ]] && { echo "username: reserved: $r" >&2; return 1; }
+    done
+
+    return 0
+
+}
 
 cleanup() {
   echo -e "\n⚠️   Interrupted. I do cleaning ..."
@@ -119,3 +150,5 @@ cat <<'TIP'
 # (macOS) Add to Filevault (after installing a password):
 #   sudo fdesetup add -usertoadd USERNAME
 TIP
+
+
