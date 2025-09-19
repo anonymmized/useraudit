@@ -19,9 +19,15 @@ create_macos_user() {
 
     read -r -s -p "Enter password for new user: " PASS; echo
 
-    sudo sysadminctl -addUser "$USER" -fullName "$FULL" -home "/Users/$USER" -shell "/bin/zsh" -password "$PASS"
+    sysadminctl -addUser "$NEW_USER" -fullName "$FULL_NAME" -home "/Users/$USER" -shell "/bin/zsh" -password "$PASS"
+    createhomedir -c -u "$NEW_USER" >/dev/null
+
+    chown "$NEW_USER:$(id -gn "$NEW_USER")" "/Users/$NEW_USER"
+    chmod 700 "/Users/$NEW_USER"
 
     unset -v PASS
+
+    echo "New user $NEW_USER at /Users/$NEW_USER were created"
 }   
 
 create_macos_user
