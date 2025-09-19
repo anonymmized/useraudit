@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+OS="$(uname -s)"
+
 if [[ $EUID -ne 0 ]]; then
     exec sudo -p "Enter password for script: " -- "$0" "$@"
 fi
@@ -27,7 +29,16 @@ create_macos_user() {
 
     unset -v PASS
 
-    echo "New user $NEW_USER at /Users/$NEW_USER were created"
+    if id "$NEW_USER" &>/dev/null; then
+        echo "New user $NEW_USER at /Users/$NEW_USER were created"
+    else
+        echo "Something went wrong"
+        exit 1
+    fi
 }   
 
-create_macos_user
+
+
+if [[ "$OS" == "Darwin" ]]; then
+    create_macos_user
+fi
