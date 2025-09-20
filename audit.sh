@@ -4,6 +4,10 @@ set -Eeuo pipefail
 
 OS="$(uname -s)"
 
+if [[ $EUID -ne 0 ]]; then
+        exec sudo -p "Enter password for script: " -- "$0" "$@"
+fi
+
 # ---------- helpers ----------
 
 usage() {
@@ -30,6 +34,12 @@ cleanup() {
     if [[ "$OS" == "Darwin" ]]; then
         if [[ ${user_created:-0} -eq 1 ]]; then
             /usr/sbin/sysadminctl -deleteUser "$NEW_USER" -secure
+        elif [[ ${home_created:-0} -eq 1 && "$HOME_DIR" == /Users/* ]]; then
+            rm -rf "$HOME_DIR"
+        fi
+    else 
+        if [[ ${user_created:-0} -eq 1 ]]; then
+            userdel -f -r "$NEW_USER"
         elif [[ ${home_created:-0} -eq 1 && "$HOME_DIR" == /home/* ]]; then
             rm -rf "$HOME_DIR"
         fi
@@ -37,10 +47,6 @@ cleanup() {
 }
 
 start() {
-    if [[ $EUID -ne 0 ]]; then
-        exec sudo -p "Enter password for script: " -- "$0" "$@"
-    fi
-
     read -r -p "Enter username: " NEW_USER; printf '\n' >&2
 
     user_created=0
