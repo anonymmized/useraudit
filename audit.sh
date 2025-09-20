@@ -4,42 +4,56 @@ set -Eeuo pipefail
 
 OS="$(uname -s)"
 
-if [[ $EUID -ne 0 ]]; then
-    exec sudo -p "Enter password for script: " -- "$0" "$@"
-fi
+# ---------- helpers ----------
 
-read -r -p "Enter username: " NEW_USER
+usage() {
+    cat <<EOF
+ Usage:  $0 [-c] [-d USER]
 
-user_created=0
-home_created=0
-HOME_DIR=$([[ "$OS" == "Darwin" ]] && echo "/Users/$NEW_USER" || echo "/home/$NEW_USER")
+ Optinons:
+    -c        Create new user (asks name, full name, password)
+    -d User   Delete the specified user
+    -h        Show this page
+EOF
+}
 
-trap 'cleanup' INT TERM ERR
+# ---------- cleanup ----------
 
 cleanup() {
-    set +e
+    set +e 
     trap - INT TERM ERR
-    echo "The process of closing the program and deleting data has begun"
+    echo "Cleanup: rolling back partial changes..."
 
     [[ -n "${NEW_USER:-}" ]] || exit 0
+    [[ -n "${HOME_DIR:-}" ]] || exit 0
 
-    if [[ "$OS" == "Darwin" ]]; then 
-        if [[ $user_created -eq 1 ]]; then 
+    if [[ "$OS" == "Darwin" ]]; then
+        if [[ ${user_created:-0} -eq 1 ]]; then
             /usr/sbin/sysadminctl -deleteUser "$NEW_USER" -secure
-        elif [[ $home_created -eq 1 && "$HOME_DIR" == /Users/* ]]; then
-            rm -rf "$HOME_DIR_MAC"
+        elif [[ ${home_created:-0} -eq 1 && "$HOME_DIR" == /home/* ]]; then
+            rm -rf "$HOME_DIR"
         fi
-    else 
-        if [[ $user_created -eq 1 ]]; then 
-            userdel -f -r "$NEW_USER"
-        elif [[ $home_created -eq 1 && "$HOME_DIR" == /home/* ]]; then
-            rm -rf "$HOME_DIR_LIN"
-        fi
-        
     fi
 }
 
-# Create users
+start() {
+    if [[ $EUID -ne 0 ]]; then
+        exec sudo -p "Enter password for script: " -- "$0" "$@"
+    fi
+
+    read -r -p "Enter username: " NEW_USER; printf '\n' >&2
+
+    user_created=0
+    home_created=0
+    if [[ "$OS" == "Darwin" ]]; then
+        HOME_DIR="/Users/$NEW_USER"
+    else 
+        HOME_DIR="/home/$NEW_USER"
+    fi
+
+    trap 'cleanup' INT TERM ERR
+}
+
 
 create_macos_user() {
     local FULL_NAME PASS PASS2
@@ -50,19 +64,18 @@ create_macos_user() {
         return 1
     fi
     
-    flag=0
+    local flag=0
     while [[ $flag -eq 0 ]]; do
-        read -r -s -p "Enter password for new user: " PASS; echo
+        read -r -s -p "Enter password for new user: " PASS; printf '\n' >&2
         if [[ ${#PASS} -lt 8 ]]; then 
             echo "Password too short, enter again"
+            continue
+        fi
+        read -r -s -p "Enter password again: " PASS2; printf '\n' >&2
+        if [[ "$PASS" == "$PASS2" ]]; then
+            flag=1
         else 
-            read -r -s -p "Enter password again: " PASS2; echo
-            if [[ "$PASS" == "$PASS2" ]]; then
-                flag=1
-            else 
-                echo "Incorrect password. Try again"
-            fi
-            
+            echo "Passwords do not match. Try again"
         fi
     done
 
@@ -77,7 +90,7 @@ create_macos_user() {
     unset -v PASS PASS2
 
     if id "$NEW_USER" &>/dev/null; then
-        echo "New user $NEW_USER at $HOME_DIR were created"
+        echo "New user '$NEW_USER' at '$HOME_DIR' were created"
         return 0
     else
         echo "Something went wrong"
@@ -85,6 +98,63 @@ create_macos_user() {
     fi
 }
 
-if [[ "$OS" == "Darwin" ]]; then
-    create_macos_user
+delete_user() {
+    local USER="$1"
+    if [[ -z "$TARGET_USER" ]]; then
+        echo "For -d, you need to specify the user's name"
+        exit 1
+    fi
+
+}
+
+DO_CREATE=0
+DO_DELETE=0
+TARGET_USER=""
+
+while getopts ":cd:h" opt; do
+    case $opt in
+        c) 
+            DO_CREATE=1
+            ;;
+        d) 
+            DO_DELETE=1
+            TARGET_USER="$OPTARG"
+            ;;
+        h) 
+            usage
+            exit 0
+            ;;
+        \?) 
+            echo "Bad option: -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [[ $DO_CREATE -eq 1 && $DO_DELETE -eq 1 ]]; then
+    echo "You cannot use -c and -d simultaneously" >&2
+    usage
+    exit 1
+fi
+
+if [[ $DO_CREATE -eq 1 ]]; then
+    start
+    if [[ "$OS" == "Darwin" ]]; then
+        create_macos_user
+    else
+        echo "Linux create flow not implemented yet" >&2
+        exit 1
+    fi
+elif [[ $DO_DELETE -eq 1 ]]; then
+    delete_user "$TARGET_USER"
+else 
+    usage 
+    exit 1
 fi
