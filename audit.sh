@@ -110,7 +110,22 @@ delete_user() {
         echo "For -d, you need to specify the user's name"
         exit 1
     fi
-
+    
+    if [[ "$OS" == "Darwin" ]]; then
+        local HOME_DIR_DEL="/Users/$USER"
+        if id -u "$USER" >/dev/null 2>&1; then
+            /usr/sbin/sysadminctl -deleteUser "$USER" -secure
+        fi
+        if [[ -d "$HOME_DIR_DEL" && "$HOME_DIR_DEL" == /Users/* ]]; then
+            rm -rf "$HOME_DIR_DEL"
+        fi
+        echo "Deleted user: '$USER'"
+    else 
+        if id -u "$USER" >/dev/null 2>&1; then
+            userdel -f -r "$USER"
+        fi
+        echo "Deleted user: '$USER'"
+    fi 
 }
 
 DO_CREATE=0
