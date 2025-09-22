@@ -17,6 +17,7 @@ usage() {
  Optinons:
     -c        Create new user (asks name, full name, password)
     -d User   Delete the specified user
+    -y User   Delete the specified user with confirmation
     -h        Show this page
 EOF
 }
@@ -130,9 +131,10 @@ delete_user() {
 
 DO_CREATE=0
 DO_DELETE=0
+DO_DELETE_Y=0
 TARGET_USER=""
 
-while getopts ":cd:h" opt; do
+while getopts ":cy:d:h" opt; do
     case $opt in
         c) 
             DO_CREATE=1
@@ -141,6 +143,9 @@ while getopts ":cd:h" opt; do
             DO_DELETE=1
             TARGET_USER="$OPTARG"
             ;;
+        y)
+            DO_DELETE_Y=1
+            TARGET_USER="$OPTARG"
         h) 
             usage
             exit 0
@@ -159,7 +164,7 @@ while getopts ":cd:h" opt; do
 done
 shift $((OPTIND - 1))
 
-if [[ $DO_CREATE -eq 1 && $DO_DELETE -eq 1 ]]; then
+if [[ $DO_CREATE -eq 1 && $DO_DELETE -eq 1 && $DO_DELETE_Y -eq 1 ]]; then
     echo "You cannot use -c and -d simultaneously" >&2
     usage
     exit 1
@@ -175,6 +180,17 @@ if [[ $DO_CREATE -eq 1 ]]; then
     fi
 elif [[ $DO_DELETE -eq 1 ]]; then
     delete_user "$TARGET_USER"
+elif [[ $DO_DELETE_Y -eq 1 ]]; then
+    read -p "Are you really sure about deleting user '$TARGET_USER'? [Y/n] " ANS; printf '\n'>&2
+    if [[ "$ANS" == "Y" ]]; then
+        delete_user "$TARGET_USER"
+    elif [[ "$ANS" == "n" ]]; then 
+        echo "Exit from the program"
+        exit 0
+    else
+        echo "Bad answer"
+        exit 1
+    fi
 else 
     usage 
     exit 1
