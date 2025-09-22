@@ -107,8 +107,8 @@ create_macos_user() {
 
 delete_user() {
     local USER="$1"
-    if [[ -z "$TARGET_USER" ]]; then
-        echo "For -d, you need to specify the user's name"
+    if [[ -z "$USER" ]]; then
+        echo "You need to specify the user's name"
         exit 1
     fi
     
@@ -134,41 +134,28 @@ DO_DELETE=0
 DO_DELETE_Y=0
 TARGET_USER=""
 
-while getopts ":cy:d:h" opt; do
+while getopts ":cd:y:h" opt; do
     case $opt in
-        c) 
-            DO_CREATE=1
-            ;;
-        d) 
-            DO_DELETE=1
-            TARGET_USER="$OPTARG"
-            ;;
-        y)
-            DO_DELETE_Y=1
-            TARGET_USER="$OPTARG"
-        h) 
-            usage
-            exit 0
-            ;;
-        \?) 
-            echo "Bad option: -$OPTARG" >&2
-            usage
-            exit 1
-            ;;
-        :)
-            echo "Option -$OPTARG requires an argument" >&2
-            usage
-            exit 1
-            ;;
+        c) DO_CREATE=1 ;;
+        d) DO_DELETE=1; TARGET_USER="$OPTARG" ;;
+        y) DO_DELETE_Y=1; TARGET_USER="$OPTARG" ;;
+        h) usage; exit 0 ;;
+        \?) echo "Bad option: -$OPTARG" >&2; usage; exit 1 ;;
+        :) echo "Option -$OPTARG requires an argument" >&2; usage; exit 1 ;;
     esac
 done
 shift $((OPTIND - 1))
 
-if [[ $DO_CREATE -eq 1 && $DO_DELETE -eq 1 && $DO_DELETE_Y -eq 1 ]]; then
-    echo "You cannot use -c and -d simultaneously" >&2
+if [[ $DO_CREATE -eq 1 && ( $DO_DELETE -eq 1 || $DO_DELETE_Y -eq 1 ) ]]; then
+    echo "You cannot use -c and -d/-y simultaneously" >&2
     usage
     exit 1
 fi
+
+if [[ $DO_DELETE -eq 1 && $DO_DELETE_Y -eq 1 ]]; then
+    echo "Choose one option -d or -y" >&2
+    usege
+    exit 1
 
 if [[ $DO_CREATE -eq 1 ]]; then
     start
@@ -179,18 +166,16 @@ if [[ $DO_CREATE -eq 1 ]]; then
         exit 1
     fi
 elif [[ $DO_DELETE -eq 1 ]]; then
-    delete_user "$TARGET_USER"
-elif [[ $DO_DELETE_Y -eq 1 ]]; then
     read -p "Are you really sure about deleting user '$TARGET_USER'? [Y/n] " ANS; printf '\n'>&2
-    if [[ "$ANS" == "Y" ]]; then
-        delete_user "$TARGET_USER"
-    elif [[ "$ANS" == "n" ]]; then 
-        echo "Exit from the program"
-        exit 0
-    else
-        echo "Bad answer"
-        exit 1
-    fi
+    ANS="${ANS:-Y}"
+    case "$ANS" in 
+        Y|y|Yes|YES) delete_user "$TARGET_USER" ;;
+        N|n|No|NO) echo "Exiting from the program"; exit 0 ;;
+        *) echo "Bad answer"; exti 1 ;;
+    esac
+    
+elif [[ $DO_DELETE_Y -eq 1 ]]; then
+    delete_user "$TARGET_USER"
 else 
     usage 
     exit 1
