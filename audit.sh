@@ -50,6 +50,11 @@ cleanup() {
 start() {
     read -r -p "Enter username: " NEW_USER; printf '\n' >&2
 
+    if id -u "$NEW_USER" >/dev/null 2>&1; then
+        echo "User '$NEW_USER' already exists." >&2
+        return 1
+    fi
+
     user_created=0
     home_created=0
     if [[ "$OS" == "Darwin" ]]; then
@@ -61,15 +66,28 @@ start() {
     trap 'cleanup' INT TERM ERR
 }
 
-
-create_macos_user() {
+create_linux_user() {
     local FULL_NAME PASS PASS2
     read -r -p "Enter full name: " FULL_NAME
 
-    if id -u "$NEW_USER" >/dev/null 2>&1; then
-        echo "User '$NEW_USER' already exists." >&2
-        return 1
-    fi
+    local flag=0
+    while [[ $flag -eq 0 ]]; do
+        read -r -s -p "Enter password for new user: " PASS; printf '\n' >&2
+        if [[ ${#PASS} -lt 8 ]]; then
+            echo "Password too short, enter again"
+            continue
+        fi
+        read -r -s -p "Enter password again: " PASS2; printf '\n' >&2
+        if [[ "$PASS" == "$PASS2" ]]; then
+            flag=1
+        else 
+            echo "Passwords do not match. Try again"
+        fi
+    done
+}
+create_macos_user() {
+    local FULL_NAME PASS PASS2
+    read -r -p "Enter full name: " FULL_NAME
     
     local flag=0
     while [[ $flag -eq 0 ]]; do
