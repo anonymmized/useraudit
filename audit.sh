@@ -41,6 +41,8 @@ cleanup() {
     else 
         if [[ ${user_created:-0} -eq 1 ]]; then
             userdel -f -r "$NEW_USER"
+        elif [[ ${pass_created:-0} -eq 1 ]]; then
+            passwd -d "$NEW_USER" 2>/dev/null || true
         elif [[ ${home_created:-0} -eq 1 && "$HOME_DIR" == /home/* ]]; then
             rm -rf "$HOME_DIR"
         fi
@@ -57,6 +59,7 @@ start() {
 
     user_created=0
     home_created=0
+    pass_created=0
     if [[ "$OS" == "Darwin" ]]; then
         HOME_DIR="/Users/$NEW_USER"
     else 
@@ -84,6 +87,26 @@ create_linux_user() {
             echo "Passwords do not match. Try again"
         fi
     done
+    useradd -m -c "$FULL_NAME" -s /bin/bash "$NEW_USER"
+    user_created=1
+
+    HASH=$(openssl passwd -6 "$PASS")
+    usermod --password "$HASH" "$NEW_USER"
+    pass_created=1
+
+    unset -v PASS PASS2 HASH
+
+    chown "$NEW_USER:$NEW_USER" "/home/$NEW_USER"
+    chmod 700 "/home/$NEW_USER"
+
+    if id "$NEW_USER" &>/dev/null; then
+        echo "New user '$NEW_USER' at '$HOME_DIR' were created"
+        return 0
+    else 
+        echo "Something went wrong"
+        exit 1
+    fi
+
 }
 create_macos_user() {
     local FULL_NAME PASS PASS2
@@ -180,8 +203,7 @@ if [[ $DO_CREATE -eq 1 ]]; then
     if [[ "$OS" == "Darwin" ]]; then
         create_macos_user
     else
-        echo "Linux create flow not implemented yet" >&2
-        exit 1
+        create_linux_user
     fi
 elif [[ $DO_DELETE -eq 1 ]]; then
     read -p "Are you really sure about deleting user '$TARGET_USER'? [Y/n] " ANS; printf '\n'>&2
