@@ -77,8 +77,12 @@ create_linux_user() {
     while [[ $flag -eq 0 ]]; do
         read -r -s -p "Enter password for new user: " PASS; printf '\n' >&2
         if [[ ${#PASS} -lt 8 ]]; then
-            echo "Password too short, enter again"
-            continue
+            read -p "Password too short. \nYou are sure you want to continue with a short password? [Y/n] " ASNWY; printf '\n' >&2
+            case "$ANSWY" in 
+                Y|y|Yes|YES|'') ;;
+                N|n|No|NO) continue ;;
+                *) echo "Invalid input. Please enter Y/y or N/n"; continue ;;
+            esac
         fi
         read -r -s -p "Enter password again: " PASS2; printf '\n' >&2
         if [[ "$PASS" == "$PASS2" ]]; then
@@ -116,8 +120,12 @@ create_macos_user() {
     while [[ $flag -eq 0 ]]; do
         read -r -s -p "Enter password for new user: " PASS; printf '\n' >&2
         if [[ ${#PASS} -lt 8 ]]; then 
-            echo "Password too short, enter again"
-            continue
+            read -p "Password too short. \nYou are sure you want to continue with a short password? [Y/n] " ANSWY; printf '\n' >&2
+            case "$ANSWY" in 
+                Y|y|yes|YES|'') ;;
+                N|n|no|NO) continue;
+                *) echo "Invalid input. Please enter Y/y or N/n"; continue ;;
+            esac
         fi
         read -r -s -p "Enter password again: " PASS2; printf '\n' >&2
         if [[ "$PASS" == "$PASS2" ]]; then
@@ -207,9 +215,8 @@ if [[ $DO_CREATE -eq 1 ]]; then
     fi
 elif [[ $DO_DELETE -eq 1 ]]; then
     read -p "Are you really sure about deleting user '$TARGET_USER'? [Y/n] " ANS; printf '\n'>&2
-    ANS="${ANS:-Y}"
     case "$ANS" in 
-        Y|y|Yes|YES) delete_user "$TARGET_USER" ;;
+        Y|y|Yes|YES|'') delete_user "$TARGET_USER" ;;
         N|n|No|NO) echo "Exiting from the program"; exit 0 ;;
         *) echo "Bad answer"; exti 1 ;;
     esac
