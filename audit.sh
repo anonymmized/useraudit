@@ -184,6 +184,22 @@ delete_user() {
     fi 
 }
 
+add_to_sudoers() {
+    local USER="$1"
+    if [[ -z "$USER" ]]; then
+        echo "The user is not specified" 
+        return 1
+    fi
+
+    if [[ "$OS" == "Darwin" ]]; then
+        dseditgroup -o edit -a "$USER" -t user admin 
+        echo "User "$USER" was added to the admin group"
+    else 
+        usermod -aG sudo "$USER"
+        echo "User "$USER" was added to the admin group"
+    fi
+}
+
 DO_CREATE=0
 DO_DELETE=0
 DO_DELETE_Y=0
@@ -217,8 +233,10 @@ if [[ $DO_CREATE -eq 1 ]]; then
     start
     if [[ "$OS" == "Darwin" ]]; then
         create_macos_user
+        add_to_sudoers
     else
         create_linux_user
+        add_to_sudoers
     fi
 elif [[ $DO_DELETE -eq 1 ]]; then
     read -p "Are you really sure about deleting user '$TARGET_USER'? [Y/n] " ANS; printf '\n'>&2
