@@ -111,7 +111,13 @@ create_linux_user() {
         exit 1
     fi
     
-    add_to_sudoers "$NEW_USER"
+    if [[ "$OS" == "Darwin" ]]; then
+        dseditgroup -o edit -a "$USER" -t user admin 
+        echo "User "$USER" was added to the admin group"
+    else 
+        usermod -aG sudo "$USER"
+        echo "User "$USER" was added to the admin group"
+    fi
 }
 create_macos_user() {
     local FULL_NAME PASS PASS2
@@ -123,7 +129,7 @@ create_macos_user() {
         if [[ ${#PASS} -lt 8 ]]; then 
             read -p "Password too short. \nYou are sure you want to continue with a short password? [Y/n] " ANSWY; printf '\n' >&2
             case "$ANSWY" in 
-                Y|y|Yes|YES|'')  # Пустая строка тоже обрабатывается
+                Y|y|Yes|YES|'')
                     ;;
                 N|n|No|NO) 
                     continue 
@@ -159,7 +165,13 @@ create_macos_user() {
         echo "Something went wrong"
         exit 1
     fi
-    add_to_sudoers "$NEW_USER"
+    if [[ "$OS" == "Darwin" ]]; then
+        dseditgroup -o edit -a "$USER" -t user admin 
+        echo "User "$USER" was added to the admin group"
+    else 
+        usermod -aG sudo "$USER"
+        echo "User "$USER" was added to the admin group"
+    fi
 }
 
 delete_user() {
@@ -184,22 +196,6 @@ delete_user() {
         fi
         echo "Deleted user: '$USER'"
     fi 
-}
-
-add_to_sudoers() {
-    local USER="$1"
-    if [[ -z "$USER" ]]; then
-        echo "The user is not specified" 
-        return 1
-    fi
-
-    if [[ "$OS" == "Darwin" ]]; then
-        dseditgroup -o edit -a "$USER" -t user admin 
-        echo "User "$USER" was added to the admin group"
-    else 
-        usermod -aG sudo "$USER"
-        echo "User "$USER" was added to the admin group"
-    fi
 }
 
 DO_CREATE=0
