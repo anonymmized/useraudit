@@ -77,7 +77,7 @@ create_linux_user() {
     while [[ $flag -eq 0 ]]; do
         read -r -s -p "Enter password for new user: " PASS; printf '\n' >&2
         if [[ ${#PASS} -lt 8 ]]; then
-            read -p "Password too short. \nYou are sure you want to continue with a short password? [Y/n] " ASNWY; printf '\n' >&2
+            read -p "Password too short. \nYou are sure you want to continue with a short password? [Y/n]: " ANSWY; printf '\n' >&2
             case "$ANSWY" in 
                 Y|y|Yes|YES|'') ;;
                 N|n|No|NO) continue ;;
