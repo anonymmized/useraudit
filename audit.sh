@@ -110,7 +110,8 @@ create_linux_user() {
         echo "Something went wrong"
         exit 1
     fi
-
+    
+    add_to_sudoers "$NEW_USER"
 }
 create_macos_user() {
     local FULL_NAME PASS PASS2
@@ -158,6 +159,7 @@ create_macos_user() {
         echo "Something went wrong"
         exit 1
     fi
+    add_to_sudoers "$NEW_USER"
 }
 
 delete_user() {
@@ -233,10 +235,8 @@ if [[ $DO_CREATE -eq 1 ]]; then
     start
     if [[ "$OS" == "Darwin" ]]; then
         create_macos_user
-        add_to_sudoers
     else
         create_linux_user
-        add_to_sudoers
     fi
 elif [[ $DO_DELETE -eq 1 ]]; then
     read -p "Are you really sure about deleting user '$TARGET_USER'? [Y/n] " ANS; printf '\n'>&2
