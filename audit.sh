@@ -122,9 +122,15 @@ create_macos_user() {
         if [[ ${#PASS} -lt 8 ]]; then 
             read -p "Password too short. \nYou are sure you want to continue with a short password? [Y/n] " ANSWY; printf '\n' >&2
             case "$ANSWY" in 
-                Y|y|yes|YES|'') ;;
-                N|n|no|NO) continue;
-                *) echo "Invalid input. Please enter Y/y or N/n"; continue ;;
+                Y|y|Yes|YES|'')  # Пустая строка тоже обрабатывается
+                    ;;
+                N|n|No|NO) 
+                    continue 
+                    ;;
+                *)
+                    echo "Invalid input. Please enter Y/y or N/n."
+                    continue
+                    ;;
             esac
         fi
         read -r -s -p "Enter password again: " PASS2; printf '\n' >&2
