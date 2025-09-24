@@ -50,7 +50,7 @@ cleanup() {
 }
 
 start() {
-    read -r -p "Enter username: " NEW_USER; printf '\n' >&2
+    read -r -p "Enter username: " NEW_USER
 
     if id -u "$NEW_USER" >/dev/null 2>&1; then
         echo "User '$NEW_USER' already exists." >&2
@@ -77,7 +77,8 @@ create_linux_user() {
     while [[ $flag -eq 0 ]]; do
         read -r -s -p "Enter password for new user: " PASS; printf '\n' >&2
         if [[ ${#PASS} -lt 8 ]]; then
-            read -p "Password too short. \nYou are sure you want to continue with a short password? [Y/n]: " ANSWY; printf '\n' >&2
+            echo "Password too short"
+            read -e -p "Are you sure you want to continue with a short password? [Y/n]: " ANSWY; printf '\n' >&2
             case "$ANSWY" in 
                 Y|y|Yes|YES|'') ;;
                 N|n|No|NO) continue ;;
@@ -91,19 +92,19 @@ create_linux_user() {
             echo "Passwords do not match. Try again"
         fi
     done
-    useradd -m -c "$FULL_NAME" -s /bin/bash "$NEW_USER"
+    useradd -m -c "$FULL_NAME" -s /bin/bash "$NEW_USER" > /dev/null 2>&1
     user_created=1
 
     HASH=$(openssl passwd -6 "$PASS")
-    usermod --password "$HASH" "$NEW_USER"
+    usermod --password "$HASH" "$NEW_USER" > /dev/null 2>&1
     pass_created=1
 
     unset -v PASS PASS2 HASH
 
-    chown "$NEW_USER:$NEW_USER" "/home/$NEW_USER"
-    chmod 700 "/home/$NEW_USER"
+    chown "$NEW_USER:$NEW_USER" "/home/$NEW_USER" > /dev/null 2>&1
+    chmod 700 "/home/$NEW_USER" > /dev/null 2>&1
 
-    usermod -aG sudo "$NEW_USER"
+    usermod -aG sudo "$NEW_USER" > /dev/null 2>&1
     echo "User '$NEW_USER' was added to the admin group"
 
     if id "$NEW_USER" &>/dev/null; then
@@ -145,17 +146,17 @@ create_macos_user() {
         fi
     done
 
-    /usr/sbin/sysadminctl -addUser "$NEW_USER" -fullName "$FULL_NAME" -home "$HOME_DIR" -shell "/bin/zsh" -password "$PASS"
+    /usr/sbin/sysadminctl -addUser "$NEW_USER" -fullName "$FULL_NAME" -home "$HOME_DIR" -shell "/bin/zsh" -password "$PASS" > /dev/null 2>&1
     user_created=1
-    /usr/sbin/createhomedir -c -u "$NEW_USER" >/dev/null
+    /usr/sbin/createhomedir -c -u "$NEW_USER" > /dev/null 2>&1
     home_created=1
     
-    chown "$NEW_USER:$(id -gn "$NEW_USER")" "$HOME_DIR"
-    chmod 700 "$HOME_DIR"
+    chown "$NEW_USER:$(id -gn "$NEW_USER")" "$HOME_DIR" > /dev/null 2>&1
+    chmod 700 "$HOME_DIR" > /dev/null 2>&1
 
     unset -v PASS PASS2
 
-    dseditgroup -o edit -a "$NEW_USER" -t user admin 
+    dseditgroup -o edit -a "$NEW_USER" -t user admin > /dev/null 2>&1
     echo "User "$NEW_USER" was added to the admin group"
 
     if id "$NEW_USER" &>/dev/null; then
@@ -178,15 +179,23 @@ delete_user() {
     if [[ "$OS" == "Darwin" ]]; then
         local HOME_DIR_DEL="/Users/$USER"
         if id -u "$USER" >/dev/null 2>&1; then
-            /usr/sbin/sysadminctl -deleteUser "$USER" -secure
+            echo "Removing user..."
+            echo "Removing from sudoers..."
+            echo "-------------------------"
+            /usr/sbin/sysadminctl -deleteUser "$USER" -secure > /dev/null 2>&1
         fi
         if [[ -d "$HOME_DIR_DEL" && "$HOME_DIR_DEL" == /Users/* ]]; then
-            rm -rf "$HOME_DIR_DEL"
+            echo "Removing the home directory..."
+            rm -rf "$HOME_DIR_DEL" > /dev/null 2>&1
         fi
         echo "Deleted user: '$USER'"
     else 
         if id -u "$USER" >/dev/null 2>&1; then
-            userdel -f -r "$USER"
+            userdel -f -r "$USER" > /dev/null 2>&1
+            echo "Removing the home directory..."
+            echo "-------------------------"
+            echo "Removing from sudoers..."
+            echo "Removing user..."
         fi
         echo "Deleted user: '$USER'"
     fi 
