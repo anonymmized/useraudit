@@ -209,8 +209,9 @@ fi
 
 if [[ $DO_DELETE -eq 1 && $DO_DELETE_Y -eq 1 ]]; then
     echo "Choose one option -d or -y" >&2
-    usege
+    usage
     exit 1
+fi
 
 if [[ $DO_CREATE -eq 1 ]]; then
     start
@@ -224,7 +225,7 @@ elif [[ $DO_DELETE -eq 1 ]]; then
     case "$ANS" in 
         Y|y|Yes|YES|'') delete_user "$TARGET_USER" ;;
         N|n|No|NO) echo "Exiting from the program"; exit 0 ;;
-        *) echo "Bad answer"; exti 1 ;;
+        *) echo "Bad answer"; exit 1 ;;
     esac
     
 elif [[ $DO_DELETE_Y -eq 1 ]]; then
