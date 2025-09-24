@@ -111,13 +111,8 @@ create_linux_user() {
         exit 1
     fi
     
-    if [[ "$OS" == "Darwin" ]]; then
-        dseditgroup -o edit -a "$USER" -t user admin 
-        echo "User "$USER" was added to the admin group"
-    else 
-        usermod -aG sudo "$USER"
-        echo "User "$USER" was added to the admin group"
-    fi
+    usermod -aG sudo "$NEW_USER"
+    echo "User "$NEW_USER" was added to the admin group"
 }
 create_macos_user() {
     local FULL_NAME PASS PASS2
@@ -165,13 +160,8 @@ create_macos_user() {
         echo "Something went wrong"
         exit 1
     fi
-    if [[ "$OS" == "Darwin" ]]; then
-        dseditgroup -o edit -a "$USER" -t user admin 
-        echo "User "$USER" was added to the admin group"
-    else 
-        usermod -aG sudo "$USER"
-        echo "User "$USER" was added to the admin group"
-    fi
+    dseditgroup -o edit -a "$NEW_USER" -t user admin 
+    echo "User "$NEW_USER" was added to the admin group"
 }
 
 delete_user() {
