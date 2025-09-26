@@ -175,16 +175,19 @@ get_info() {
         echo "You need to specify the user's name"
         exit 1
     fi
-
-    if [[ "$OS" == "Darwin" ]]; then
-        echo "username : $USER"
-        uid=$(id "$USER" | grep uid | awk -F'=' '{print $2}' | awk -F' ' '{print $1}' | awk -F'(' '{print $1}')
-        echo "UID : $uid"
-        gid=$(id "$USER" | grep gid | awk -F' ' '{print $2}' | awk -F'=' '{print $2}' | awk -F'(' '{print $1}')
-        echo "GID : $gid"
-        user_name=$(finger "$USER" | grep Name | awk -F': ' '{print $3}')
-        echo "Name : $user_name"
-    fi 
+    echo "Username : $USER"
+    uid=$(id "$USER" | grep uid | awk -F'=' '{print $2}' | awk -F' ' '{print $1}' | awk -F'(' '{print $1}')
+    echo "UID : $uid"
+    gid=$(id "$USER" | grep gid | awk -F' ' '{print $2}' | awk -F'=' '{print $2}' | awk -F'(' '{print $1}')
+    echo "GID : $gid"
+    user_name=$(finger "$USER" | grep Name | awk -F': ' '{print $3}')
+    echo "Name : $user_name"
+    home_dir=$(finger "$USER" | grep Directory | awk -F': ' '{print $2}' | awk -F' ' '{print $1}')
+    echo "Home directory : $home_dir"
+    shell_name=$(finger "$USER" | grep Shell | awk -F': ' '{print $3}')
+    echo "Shell : $shell_name"
+    grps=$(groups "$USER")
+    echo "Additional user groups : $grps"
 }
 
 delete_user() {
