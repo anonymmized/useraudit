@@ -169,6 +169,24 @@ create_macos_user() {
     
 }
 
+get_info() {
+    local USER="$1"
+    if [[ -z "$USER" ]]; then
+        echo "You need to specify the user's name"
+        exit 1
+    fi
+
+    if [[ "$OS" == "Darwin" ]]; then
+        echo "username : $USER"
+        uid=$(id "$USER" | grep uid | awk -F'=' '{print $2}' | awk -F' ' '{print $1}' | awk -F'(' '{print $1}')
+        echo "UID : $uid"
+        gid=$(id "$USER" | grep gid | awk -F' ' '{print $2}' | awk -F'=' '{print $2}' | awk -F'(' '{print $1}')
+        echo "GID : $gid"
+        user_name=$(finger "$USER" | grep Name | awk -F': ' '{print $3}')
+        echo "Name : $user_name"
+    fi 
+}
+
 delete_user() {
     local USER="$1"
     if [[ -z "$USER" ]]; then
@@ -204,13 +222,15 @@ delete_user() {
 DO_CREATE=0
 DO_DELETE=0
 DO_DELETE_Y=0
+DO_MONITOR=0
 TARGET_USER=""
 
-while getopts ":cd:y:h" opt; do
+while getopts ":cd:y:m:h" opt; do
     case $opt in
         c) DO_CREATE=1 ;;
         d) DO_DELETE=1; TARGET_USER="$OPTARG" ;;
         y) DO_DELETE_Y=1; TARGET_USER="$OPTARG" ;;
+        m) DO_MONITOR=1; TARGET_USER="$OPTARG" ;;
         h) usage; exit 0 ;;
         \?) echo "Bad option: -$OPTARG" >&2; usage; exit 1 ;;
         :) echo "Option -$OPTARG requires an argument" >&2; usage; exit 1 ;;
@@ -244,6 +264,9 @@ elif [[ $DO_DELETE -eq 1 ]]; then
         N|n|No|NO) echo "Exiting from the program"; exit 0 ;;
         *) echo "Bad answer"; exit 1 ;;
     esac
+
+elif [[ $DO_MONITOR -eq 1 ]]; then
+    get_info "$TARGET_USER"
     
 elif [[ $DO_DELETE_Y -eq 1 ]]; then
     delete_user "$TARGET_USER"
