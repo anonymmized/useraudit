@@ -186,8 +186,13 @@ get_info() {
     echo "Home directory : $home_dir"
     shell_name=$(finger "$USER" | grep Shell | awk -F': ' '{print $3}')
     echo "Shell : $shell_name"
-    grps=$(groups "$USER")
-    echo "Additional user groups : $grps"
+    if [[ "$OS" == "Darwin" ]]; then
+        grps=$(groups "$USER")
+        echo "Additional $USER's groups : $grps"
+    else 
+        grps=$(groups "$USER" | awk -F' : ' '{print $2}')
+        echo "Additional $USER's groups : $grps"
+    fi
 }
 
 delete_user() {
