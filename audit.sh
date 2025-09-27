@@ -216,11 +216,7 @@ get_info() {
             if [[ -n "$last_login_alt" && "$last_login_alt" != "never" ]]; then
                 echo "Last login : $last_login_alt"
             else
-                if last "$USER" 2>/dev/null | grep -q "$USER"; then
-                    echo "Last login : data available but format unclear"
-                else
-                    echo "Last login : never logged in"
-                fi
+                echo "Last login : never logged in"
             fi
         fi
     fi
