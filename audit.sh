@@ -204,26 +204,26 @@ get_info() {
         echo "Shell : $shell_name"
         grps=$(groups "$USER" | awk -F' : ' '{print $2}')
         echo "Additional $USER's groups : $grps"
-        # Try finger first
-        last_login_last=$(finger "$USER" 2>/dev/null | grep Last | awk '{print $4, $5}')
-        last_login_on=$(finger "$USER" 2>/dev/null | grep since | awk '{print $4, $5}')
-        
-        # Debug output
-        echo "DEBUG: finger last='$last_login_last'"
-        echo "DEBUG: finger since='$last_login_on'"
-        
-        if [[ -n "$last_login_last" && "$last_login_last" != "" ]]; then
-            echo "Last login : $last_login_last"
-        elif [[ -n "$last_login_on" && "$last_login_on" != "" ]]; then
-            echo "Last login : $last_login_on"
+        # Check if we're in a container (no wtmp logs)
+        if [[ -f /.dockerenv ]] || [[ -n "${container:-}" ]] || [[ ! -f /var/log/wtmp ]]; then
+            echo "Last login : not available (running in container)"
         else
-            # Try last command as alternative
-            last_login_alt=$(last -1 "$USER" 2>/dev/null | head -1 | awk '{print $4, $5, $6, $7, $8}' | sed 's/^ *//')
-            echo "DEBUG: last command='$last_login_alt'"
-            if [[ -n "$last_login_alt" && "$last_login_alt" != "never" && "$last_login_alt" != "" ]]; then
-                echo "Last login : $last_login_alt"
+            # Try finger first
+            last_login_last=$(finger "$USER" 2>/dev/null | grep Last | awk '{print $4, $5}')
+            last_login_on=$(finger "$USER" 2>/dev/null | grep since | awk '{print $4, $5}')
+            
+            if [[ -n "$last_login_last" && "$last_login_last" != "" ]]; then
+                echo "Last login : $last_login_last"
+            elif [[ -n "$last_login_on" && "$last_login_on" != "" ]]; then
+                echo "Last login : $last_login_on"
             else
-                echo "Last login : never logged in"
+                # Try last command as alternative
+                last_login_alt=$(last -1 "$USER" 2>/dev/null | head -1 | awk '{print $4, $5, $6, $7, $8}' | sed 's/^ *//')
+                if [[ -n "$last_login_alt" && "$last_login_alt" != "never" && "$last_login_alt" != "" ]]; then
+                    echo "Last login : $last_login_alt"
+                else
+                    echo "Last login : never logged in"
+                fi
             fi
         fi
     fi
