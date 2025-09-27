@@ -183,7 +183,7 @@ get_info() {
     if [[ "$OS" == "Darwin" ]]; then
         user_name=$(dscl . -read /Users/"$USER" | grep RealName | awk -F': ' '{print $2}' | sed 's/^ *//')
         echo "Name : $user_name"
-        home_dir=$(dscl . -read /Userrs/"$USER" | grep NFSHomeDirectory | awk -F': ' '{print $2}' | sed 's/^ *//')
+        home_dir=$(dscl . -read /Users/"$USER" | grep NFSHomeDirectory | awk -F': ' '{print $2}' | sed 's/^ *//')
         echo "Home directory : $home_dir"
         shell_name=$(dscl . -read /Users/"$USER" | grep UserShell | awk -F': ' '{print $3}' | sed 's/^ *//')
         echo "Shell : $shell_name"
@@ -204,17 +204,15 @@ get_info() {
         echo "Shell : $shell_name"
         grps=$(groups "$USER" | awk -F' : ' '{print $2}')
         echo "Additional $USER's groups : $grps"
-    fi
-    
-    last_login_last=$(finger "$USER" | grep Last | awk '{print $4, $5}')
-    last_login_on=$(last -1 "$USER" | awk -F' ' '{print $4, print}'
-    echo "last_login_last='$last_login_last'"
-    echo "last_login_on='$last_login_on'"
-
-    if [[ -n "$last_login_last" ]]; then
-        echo "Last login : $last_login_last"
-    elif [[ -n "$last_login_on" ]]; then
-        echo "Last login : $last_login_on"
+        last_login_last=$(finger "$USER" | grep Last | awk '{print $4, $5}')
+        last_login_on=$(finger "$USER" | grep since | awk '{print $4, $5}')
+        if [[ -n "$last_login_last" ]]; then
+            echo "Last login : $last_login_last"
+        elif [[ -n "$last_login_on" ]]; then
+            echo "Last login : $last_login_on"
+        else 
+            echo "Last login : never logged in"
+        fi
     fi
 }
 
