@@ -180,18 +180,41 @@ get_info() {
     echo "UID : $uid"
     gid=$(id "$USER" | grep gid | awk -F' ' '{print $2}' | awk -F'=' '{print $2}' | awk -F'(' '{print $1}')
     echo "GID : $gid"
-    user_name=$(finger "$USER" | grep Name | awk -F': ' '{print $3}')
-    echo "Name : $user_name"
-    home_dir=$(finger "$USER" | grep Directory | awk -F': ' '{print $2}' | awk -F' ' '{print $1}')
-    echo "Home directory : $home_dir"
-    shell_name=$(finger "$USER" | grep Shell | awk -F': ' '{print $3}')
-    echo "Shell : $shell_name"
     if [[ "$OS" == "Darwin" ]]; then
+        user_name=$(dscl . -read /Users/"$USER" | grep RealName | awk -F': ' '{print $2}' | sed 's/^ *//')
+        echo "Name : $user_name"
+        home_dir=$(dscl . -read /Userrs/"$USER" | grep NFSHomeDirectory | awk -F': ' '{print $2}' | sed 's/^ *//')
+        echo "Home directory : $home_dir"
+        shell_name=$(dscl . -read /Users/"$USER" | grep UserShell | awk -F': ' '{print $3}' | sed 's/^ *//')
+        echo "Shell : $shell_name"
         grps=$(groups "$USER")
         echo "Additional $USER's groups : $grps"
+        last_login=$(last -1 "$USER" 2>/dev/null | head -1 | awk '{print $4, $5, $6, $7, $8}' | sed 's/^ *//')
+        if [[ -n "$last_login" && "$last_login" != "never" ]]; then
+            echo "Last login : $last_login"
+        else 
+            echo "Last login : never logged in"
+        fi
     else 
+        user_name=$(finger "$USER" | grep Name | awk -F': ' '{print $3}')
+        echo "Name : $user_name"
+        home_dir=$(finger "$USER" | grep Directory | awk -F': ' '{print $2}' | awk -F' ' '{print $1}')
+        echo "Home directory : $home_dir"
+        shell_name=$(finger "$USER" | grep Shell | awk -F': ' '{print $3}')
+        echo "Shell : $shell_name"
         grps=$(groups "$USER" | awk -F' : ' '{print $2}')
         echo "Additional $USER's groups : $grps"
+    fi
+    
+    last_login_last=$(finger "$USER" | grep Last | awk '{print $4, $5}')
+    last_login_on=$(last -1 "$USER" | awk -F' ' '{print $4, print}'
+    echo "last_login_last='$last_login_last'"
+    echo "last_login_on='$last_login_on'"
+
+    if [[ -n "$last_login_last" ]]; then
+        echo "Last login : $last_login_last"
+    elif [[ -n "$last_login_on" ]]; then
+        echo "Last login : $last_login_on"
     fi
 }
 
