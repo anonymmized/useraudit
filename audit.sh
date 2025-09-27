@@ -204,14 +204,24 @@ get_info() {
         echo "Shell : $shell_name"
         grps=$(groups "$USER" | awk -F' : ' '{print $2}')
         echo "Additional $USER's groups : $grps"
-        last_login_last=$(finger "$USER" | grep Last | awk '{print $4, $5}')
-        last_login_on=$(finger "$USER" | grep since | awk '{print $4, $5}')
+        last_login_last=$(finger "$USER" 2>/dev/null | grep Last | awk '{print $4, $5}')
+        last_login_on=$(finger "$USER" 2>/dev/null | grep since | awk '{print $4, $5}')
+        
         if [[ -n "$last_login_last" ]]; then
             echo "Last login : $last_login_last"
         elif [[ -n "$last_login_on" ]]; then
             echo "Last login : $last_login_on"
-        else 
-            echo "Last login : never logged in"
+        else
+            last_login_alt=$(last -1 "$USER" 2>/dev/null | head -1 | awk '{print $4, $5, $6, $7, $8}' | sed 's/^ *//')
+            if [[ -n "$last_login_alt" && "$last_login_alt" != "never" ]]; then
+                echo "Last login : $last_login_alt"
+            else
+                if last "$USER" 2>/dev/null | grep -q "$USER"; then
+                    echo "Last login : data available but format unclear"
+                else
+                    echo "Last login : never logged in"
+                fi
+            fi
         fi
     fi
 }
