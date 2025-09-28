@@ -275,14 +275,16 @@ DO_CREATE=0
 DO_DELETE=0
 DO_DELETE_Y=0
 DO_MONITOR=0
+DO_CHANGE=0
 TARGET_USER=""
 
-while getopts ":cd:y:m:h" opt; do
+while getopts ":cd:y:m:p:h" opt; do
     case $opt in
         c) DO_CREATE=1 ;;
         d) DO_DELETE=1; TARGET_USER="$OPTARG" ;;
         y) DO_DELETE_Y=1; TARGET_USER="$OPTARG" ;;
         m) DO_MONITOR=1; TARGET_USER="$OPTARG" ;;
+        p) DO_CHANGE=1; TARGET_USER="$OPTARG" ;;
         h) usage; exit 0 ;;
         \?) echo "Bad option: -$OPTARG" >&2; usage; exit 1 ;;
         :) echo "Option -$OPTARG requires an argument" >&2; usage; exit 1 ;;
@@ -322,6 +324,8 @@ elif [[ $DO_MONITOR -eq 1 ]]; then
     
 elif [[ $DO_DELETE_Y -eq 1 ]]; then
     delete_user "$TARGET_USER"
+elif [[ $DO_CHANGE -eq 1 ]]; then
+    change_pass "$TARGET_USER"
 else 
     usage 
     exit 1
