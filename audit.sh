@@ -169,6 +169,19 @@ create_macos_user() {
     
 }
 
+change_pass() {
+    local USER="$1"
+    if [[ -z "$USER" ]]; then
+        echo "You need to specify the user's name"
+        exit 1
+    fi
+
+    if [[ "$OS" == "Darwin" ]]; then
+        security set-keychain-password /Users/"$USER"/Library/Keychains/login.keychain-db 
+        echo "Password for user $USER was changed"
+    fi
+}
+
 get_info() {
     local USER="$1"
     if [[ -z "$USER" ]]; then
@@ -204,11 +217,9 @@ get_info() {
         echo "Shell : $shell_name"
         grps=$(groups "$USER" | awk -F' : ' '{print $2}')
         echo "Additional $USER's groups : $grps"
-        # Check if we're in a container (no wtmp logs)
         if [[ -f /.dockerenv ]] || [[ -n "${container:-}" ]] || [[ ! -f /var/log/wtmp ]]; then
             echo "Last login : not available (running in container)"
         else
-            # Try finger first
             last_login_last=$(finger "$USER" 2>/dev/null | grep Last | awk '{print $4, $5}')
             last_login_on=$(finger "$USER" 2>/dev/null | grep since | awk '{print $4, $5}')
             
@@ -217,7 +228,6 @@ get_info() {
             elif [[ -n "$last_login_on" && "$last_login_on" != "" ]]; then
                 echo "Last login : $last_login_on"
             else
-                # Try last command as alternative
                 last_login_alt=$(last -1 "$USER" 2>/dev/null | head -1 | awk '{print $4, $5, $6, $7, $8}' | sed 's/^ *//')
                 if [[ -n "$last_login_alt" && "$last_login_alt" != "never" && "$last_login_alt" != "" ]]; then
                     echo "Last login : $last_login_alt"
