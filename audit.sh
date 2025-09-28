@@ -178,7 +178,18 @@ change_pass() {
 
     if [[ "$OS" == "Darwin" ]]; then
         security set-keychain-password /Users/"$USER"/Library/Keychains/login.keychain-db 
-        echo "Password for user $USER was changed"
+        if [[ $? -eq 0 ]]; then
+            echo "Password for user $USER was changed"    
+        else 
+            echo "Something went wrong"
+        fi
+    else 
+        passwd "$USER"
+        if [[ $? -eq 0 ]]; then
+            echo "Password for user $USER was changed"
+        else 
+            echo "Something went wrong"
+        fi
     fi
 }
 
