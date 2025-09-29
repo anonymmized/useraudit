@@ -69,6 +69,41 @@ start() {
     trap 'cleanup' INT TERM ERR
 }
 
+add_to_group() {
+    local USER="$1"
+    local GROUPP
+    local groups_array=($(groups))
+    local cnt=${#groups_array[@]}
+    local i=1
+
+    for group in "${groups_array[@]}"; do
+        echo "$i - $group"
+        ((i++))
+    done
+
+    read -r -p "Enter the number of the group where you need to add the specified user: " GROUPP
+    if [[ "$OS" == "Darwin" ]]; then
+        if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
+            local selected_group="${groups_array[$((GROUPP - 1))]}"
+            echo "Adding user $USER to group $selected_group"
+            sudo dscl . -append /Groups/"$selected_group" GroupMembership "$USER"
+            echo "User $USER added to group $selected_group"
+        else 
+            echo "Invalid group number"
+        fi
+    else 
+        if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
+            local selected_group="${groups_array[$((GROUPP - 1))]}"
+            echo "Adding user $USER to group $selected_group"
+            sudo usermod -aG "$selected_group" "$USER"
+            echo "User $USER added to group $selected_group"
+        else 
+            echo "Invalid group number"
+        fi
+    fi
+    
+}
+
 create_linux_user() {
     local FULL_NAME PASS PASS2
     read -r -p "Enter full name: " FULL_NAME
@@ -287,11 +322,21 @@ DO_DELETE=0
 DO_DELETE_Y=0
 DO_MONITOR=0
 DO_CHANGE=0
+DO_ADD_T_GROUP=0
 TARGET_USER=""
+# TARGET_GROUP=""
 
-while getopts ":cd:y:m:p:h" opt; do
+while getopts ":ca:d:y:m:p:h" opt; do
     case $opt in
         c) DO_CREATE=1 ;;
+        a) 
+            DO_ADD_T_GROUP=1
+            TARGET_USER="$OPTARG"
+            # shift $((OPTIND - 1))
+            # if [[ $# -gt 0 && $1 != -* ]]; then
+            #     TARGET_GROUP="$1"
+            # fi
+            ;;
         d) DO_DELETE=1; TARGET_USER="$OPTARG" ;;
         y) DO_DELETE_Y=1; TARGET_USER="$OPTARG" ;;
         m) DO_MONITOR=1; TARGET_USER="$OPTARG" ;;
@@ -332,6 +377,9 @@ elif [[ $DO_DELETE -eq 1 ]]; then
 
 elif [[ $DO_MONITOR -eq 1 ]]; then
     get_info "$TARGET_USER"
+
+elif [[ $DO_ADD_T_GROUP -eq 1 ]]; then
+    add_to_group "$TARGET_USER"
     
 elif [[ $DO_DELETE_Y -eq 1 ]]; then
     delete_user "$TARGET_USER"
