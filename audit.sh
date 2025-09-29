@@ -16,8 +16,11 @@ usage() {
 
  Optinons:
     -c        Create new user (asks name, full name, password)
+    -a User   Add the specified user to the group     
     -d User   Delete the specified user
     -y User   Delete the specified user with confirmation
+    -m User   Display information on the specified user
+    -p User   Change the specified user password
     -h        Show this page
 EOF
 }
@@ -49,6 +52,8 @@ cleanup() {
     fi
 }
 
+# ---------- start ----------
+
 start() {
     read -r -p "Enter username: " NEW_USER
 
@@ -68,6 +73,8 @@ start() {
 
     trap 'cleanup' INT TERM ERR
 }
+
+# ---------- add_to_group ----------
 
 add_to_group() {
     local USER="$1"
@@ -103,6 +110,8 @@ add_to_group() {
     fi
     
 }
+
+# ---------- create_linux_user ----------
 
 create_linux_user() {
     local FULL_NAME PASS PASS2
@@ -149,9 +158,10 @@ create_linux_user() {
         echo "Something went wrong"
         exit 1
     fi
-    
-    
 }
+
+# ---------- create_macos_user ----------
+
 create_macos_user() {
     local FULL_NAME PASS PASS2
     read -r -p "Enter full name: " FULL_NAME
@@ -204,6 +214,8 @@ create_macos_user() {
     
 }
 
+# ---------- change_pass ----------
+
 change_pass() {
     local USER="$1"
     if [[ -z "$USER" ]]; then
@@ -227,6 +239,8 @@ change_pass() {
         fi
     fi
 }
+
+# ---------- get_info ----------
 
 get_info() {
     local USER="$1"
@@ -285,6 +299,8 @@ get_info() {
     fi
 }
 
+# ---------- delete_user ----------
+
 delete_user() {
     local USER="$1"
     if [[ -z "$USER" ]]; then
@@ -316,6 +332,8 @@ delete_user() {
         echo "Deleted user: '$USER'"
     fi 
 }
+
+# ---------- Processing of arguments ----------
 
 DO_CREATE=0
 DO_DELETE=0
