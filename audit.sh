@@ -14,9 +14,10 @@ usage() {
     cat <<EOF
  Usage:  $0 [-c] [-d USER]
 
- Optinons:
+ Options:
     -c        Create new user (asks name, full name, password)
-    -a User   Add the specified user to the group     
+    -a User   Add the specified user to the group 
+    -r User   Remove the specified user from the group    
     -d User   Delete the specified user
     -y User   Delete the specified user with confirmation
     -m User   Display information on the specified user
@@ -83,7 +84,7 @@ remove_from_group() {
     local cnt=${#groups_array[@]}
     local i=1
 
-    for group in "${#groups_array[@]}"; do
+    for group in "${groups_array[@]}"; do
         echo "$i - $group"
         ((i++))
     done
@@ -93,7 +94,7 @@ remove_from_group() {
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
             echo "Removing user $USER from group $selected_group..."
-            sudo dscl . -delete /Groups/"$selected_group" GroupMembership "$USER"
+            dscl . -delete /Groups/"$selected_group" GroupMembership "$USER"
             echo "User $USER removed from group $selected_group"
         else 
             echo "Invalid group number"
@@ -102,7 +103,7 @@ remove_from_group() {
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
             echo "Removing user $USER from group $selected_group"
-            sudo gpasswd -d "$USER" "$selected_group"
+            gpasswd -d "$USER" "$selected_group"
             echo "User $USER removed from group $selected_group"
         else
             echo "Invalid group number"
@@ -131,7 +132,7 @@ add_to_group() {
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
             echo "Adding user $USER to group $selected_group..."
-            sudo dscl . -append /Groups/"$selected_group" GroupMembership "$USER"
+            dscl . -append /Groups/"$selected_group" GroupMembership "$USER"
             echo "User $USER added to group $selected_group"
         else 
             echo "Invalid group number"
@@ -140,7 +141,7 @@ add_to_group() {
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
             echo "Adding user $USER to group $selected_group"
-            sudo usermod -aG "$selected_group" "$USER"
+            usermod -aG "$selected_group" "$USER"
             echo "User $USER added to group $selected_group"
         else 
             echo "Invalid group number"
@@ -287,9 +288,9 @@ get_info() {
         exit 1
     fi
     echo "Username : $USER"
-    uid=$(id "$USER" | grep uid | awk -F'=' '{print $2}' | awk -F' ' '{print $1}' | awk -F'(' '{print $1}')
+    uid=$(id -u "$USER")
     echo "UID : $uid"
-    gid=$(id "$USER" | grep gid | awk -F' ' '{print $2}' | awk -F'=' '{print $2}' | awk -F'(' '{print $1}')
+    gid=$(id -g "$USER")
     echo "GID : $gid"
     if [[ "$OS" == "Darwin" ]]; then
         user_name=$(dscl . -read /Users/"$USER" | grep RealName | awk -F': ' '{print $2}' | sed 's/^ *//')
@@ -383,7 +384,7 @@ DO_REMOVE_GROUP=0
 TARGET_USER=""
 # TARGET_GROUP=""
 
-while getopts ":ca:d:y:m:p:h" opt; do
+while getopts ":ca:r:d:y:m:p:h" opt; do
     case $opt in
         c) DO_CREATE=1 ;;
         a) 
