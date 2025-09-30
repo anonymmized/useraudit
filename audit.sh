@@ -74,6 +74,44 @@ start() {
     trap 'cleanup' INT TERM ERR
 }
 
+# ---------- remove_from_group ----------
+
+remove_from_group() {
+    local USER="$1"
+    local GROUPP
+    local groups_array=($(groups))
+    local cnt=${#groups_array[@]}
+    local i=1
+
+    for group in "${#groups_array[@]}"; do
+        echo "$i - $group"
+        ((i++))
+    done
+
+    read -r -p "Enter the group number from where you want to delete a specialized user: " GROUPP
+    if [[ "$OS" == "Darwin" ]]; then
+        if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
+            local selected_group="${groups_array[$((GROUPP - 1))]}"
+            echo "Removing user $USER from group $selected_group..."
+            sudo dscl . -delete /Groups/"$selected_group" GroupMembership "$USER"
+            echo "User $USER removed from group $selected_group"
+        else 
+            echo "Invalid group number"
+        fi
+    else 
+        if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
+            local selected_group="${groups_array[$((GROUPP - 1))]}"
+            echo "Removing user $USER from group $selected_group"
+            sudo gpasswd -d "$USER" "$selected_group"
+            echo "User $USER removed from group $selected_group"
+        else
+            echo "Invalid group number"
+        fi
+        
+
+    fi
+}
+
 # ---------- add_to_group ----------
 
 add_to_group() {
@@ -92,7 +130,7 @@ add_to_group() {
     if [[ "$OS" == "Darwin" ]]; then
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
-            echo "Adding user $USER to group $selected_group"
+            echo "Adding user $USER to group $selected_group..."
             sudo dscl . -append /Groups/"$selected_group" GroupMembership "$USER"
             echo "User $USER added to group $selected_group"
         else 
@@ -341,6 +379,7 @@ DO_DELETE_Y=0
 DO_MONITOR=0
 DO_CHANGE=0
 DO_ADD_T_GROUP=0
+DO_REMOVE_GROUP=0
 TARGET_USER=""
 # TARGET_GROUP=""
 
@@ -355,6 +394,7 @@ while getopts ":ca:d:y:m:p:h" opt; do
             #     TARGET_GROUP="$1"
             # fi
             ;;
+        r) DO_REMOVE_GROUP=1; TARGET_USER="$OPTARG" ;;
         d) DO_DELETE=1; TARGET_USER="$OPTARG" ;;
         y) DO_DELETE_Y=1; TARGET_USER="$OPTARG" ;;
         m) DO_MONITOR=1; TARGET_USER="$OPTARG" ;;
@@ -398,6 +438,9 @@ elif [[ $DO_MONITOR -eq 1 ]]; then
 
 elif [[ $DO_ADD_T_GROUP -eq 1 ]]; then
     add_to_group "$TARGET_USER"
+
+elif [[ $DO_REMOVE_GROUP -eq 1 ]]; then
+    remove_from_group "$TARGET_USER"
     
 elif [[ $DO_DELETE_Y -eq 1 ]]; then
     delete_user "$TARGET_USER"
