@@ -105,9 +105,6 @@ change_shell() {
             echo "The shell was successfully changed"
         fi
     fi
-
-
-    
 }
 
 # ---------- remove_from_group ----------
