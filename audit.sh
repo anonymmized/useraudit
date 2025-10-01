@@ -20,6 +20,7 @@ usage() {
     -r User   Remove the specified user from the group    
     -d User   Delete the specified user
     -y User   Delete the specified user with confirmation
+    -s        View the current shell and/or change       
     -m User   Display information on the specified user
     -p User   Change the specified user password
     -h        Show this page
@@ -73,6 +74,40 @@ start() {
     fi
 
     trap 'cleanup' INT TERM ERR
+}
+
+# ---------- change_shell ----------
+
+change_shell() {
+    local active_shell=$(echo $SHELL)
+    local available_shells=($(cat /etc/shells | grep '^/'))
+    local i=1
+    local SHLL
+    local cnt=${#available_shells[@]}
+    echo "Active shell: $active_shell"
+
+    for shell in "${available_shells[@]}"; do
+        echo "$i - $shell"
+        ((i++))
+    done
+
+    read -r -p "Select the shell number that you want to put: " SHLL
+    if [[ $SHLL -le $cnt && $SHLL -gt 0 ]]; then
+        if [[ "$OS" == "Darwin" ]]; then
+            local selected_shell="${available_shells[$((SHLL - 1))]}"
+            echo "A shift in the shell is performed..."
+            chsh -s "$selected_shell"
+            echo "The shell was successfully changed"
+        else 
+            local selected_shell="${available_shells[$((SHLL - 1))]}"
+            echo "A shift in the shell is performed..."
+            chsh -s "$selected_chell"
+            echo "The shell was successfully changed"
+        fi
+    fi
+
+
+    
 }
 
 # ---------- remove_from_group ----------
@@ -381,10 +416,11 @@ DO_MONITOR=0
 DO_CHANGE=0
 DO_ADD_T_GROUP=0
 DO_REMOVE_GROUP=0
+DO_CHANGE_SHELL=0
 TARGET_USER=""
 # TARGET_GROUP=""
 
-while getopts ":ca:r:d:y:m:p:h" opt; do
+while getopts ":ca:r:d:y:m:p:sh" opt; do
     case $opt in
         c) DO_CREATE=1 ;;
         a) 
@@ -400,6 +436,7 @@ while getopts ":ca:r:d:y:m:p:h" opt; do
         y) DO_DELETE_Y=1; TARGET_USER="$OPTARG" ;;
         m) DO_MONITOR=1; TARGET_USER="$OPTARG" ;;
         p) DO_CHANGE=1; TARGET_USER="$OPTARG" ;;
+        s) DO_CHANGE_SHELL=1 ;;
         h) usage; exit 0 ;;
         \?) echo "Bad option: -$OPTARG" >&2; usage; exit 1 ;;
         :) echo "Option -$OPTARG requires an argument" >&2; usage; exit 1 ;;
@@ -445,8 +482,13 @@ elif [[ $DO_REMOVE_GROUP -eq 1 ]]; then
     
 elif [[ $DO_DELETE_Y -eq 1 ]]; then
     delete_user "$TARGET_USER"
+
+elif [[ $DO_CHANGE_SHELL -eq 1 ]]; then
+    change_shell
+
 elif [[ $DO_CHANGE -eq 1 ]]; then
     change_pass "$TARGET_USER"
+
 else 
     usage 
     exit 1
