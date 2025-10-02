@@ -27,6 +27,33 @@ usage() {
 EOF
 }
 
+# ---------- block_user ----------
+
+block_user() {
+    local USER="$1"
+
+    if [[ "$OS" == "Darwin" ]]; then
+        echo "User $USER blocking..."
+        dscl . -append /Users/"$USER" AuthenticationAuthority ";DisabledUser;" 2>/dev/null
+        err_code=$(echo $?)
+        if [[ $err_code -eq 0 ]]; then
+            echo "Status: Disabled"
+        else 
+            echo "It was not possible to block the user. Error code: $err_code"
+        fi
+
+    else 
+        echo "User $USER blocking..."
+        passwd -l "$USER" 2>/dev/null
+        err_code=$(echo $?)
+        if [[ $err_code -eq 0 ]]; then
+            echo "Status: Disabled"
+        else 
+            echo "It was not possible to block the user. Error code: $err_code"
+        fi
+    fi
+}
+
 # ---------- cleanup ----------
 
 cleanup() {
@@ -414,10 +441,11 @@ DO_CHANGE=0
 DO_ADD_T_GROUP=0
 DO_REMOVE_GROUP=0
 DO_CHANGE_SHELL=0
+DO_LOCK=0
 TARGET_USER=""
 # TARGET_GROUP=""
 
-while getopts ":ca:r:d:y:m:p:sh" opt; do
+while getopts ":ca:r:d:y:m:p:sL:h" opt; do
     case $opt in
         c) DO_CREATE=1 ;;
         a) 
@@ -432,6 +460,7 @@ while getopts ":ca:r:d:y:m:p:sh" opt; do
         d) DO_DELETE=1; TARGET_USER="$OPTARG" ;;
         y) DO_DELETE_Y=1; TARGET_USER="$OPTARG" ;;
         m) DO_MONITOR=1; TARGET_USER="$OPTARG" ;;
+        L) DO_LOCK=1; TARGET_USER="$OPTARG" ;;
         p) DO_CHANGE=1; TARGET_USER="$OPTARG" ;;
         s) DO_CHANGE_SHELL=1 ;;
         h) usage; exit 0 ;;
@@ -467,6 +496,9 @@ elif [[ $DO_DELETE -eq 1 ]]; then
         N|n|No|NO) echo "Exiting from the program"; exit 0 ;;
         *) echo "Bad answer"; exit 1 ;;
     esac
+
+elif [[ $DO_LOCK -eq 1 ]]; then
+    block_user "$TARGET_USER"
 
 elif [[ $DO_MONITOR -eq 1 ]]; then
     get_info "$TARGET_USER"
