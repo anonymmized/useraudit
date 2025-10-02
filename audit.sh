@@ -54,6 +54,28 @@ block_user() {
     fi
 }
 
+unblock_user() {
+    local USER="$1"
+    if [[ "$OS" == "Darwin" ]]; then
+        echo "Unlocking user $USER..."
+        sudo dscl . -delete /Users/"$USER" AuthenticationAuthority ";DisabledUser;" 2>/dev/null
+        err_code=$(echo $?)
+        if [[ $err_code -eq 0 ]]; then
+            echo "Status: Unlocked"
+        else 
+            echo "It was not possible to unblock the user. Error code: $err_code"
+        fi
+    else
+        echo "Unblocking user $USER..."
+        passwd -u "$USER" 2>/dev/null
+        err_code=$(echo $?)
+        if [[ $err_code -eq 0 ]]; then
+            echo "Status: Unlocked" 
+        else
+            echo "It was not possible to unblock the user. Error code: $err_code"
+        fi
+}
+
 # ---------- cleanup ----------
 
 cleanup() {
@@ -442,10 +464,11 @@ DO_ADD_T_GROUP=0
 DO_REMOVE_GROUP=0
 DO_CHANGE_SHELL=0
 DO_LOCK=0
+DO_UNLOCK=0
 TARGET_USER=""
 # TARGET_GROUP=""
 
-while getopts ":ca:r:d:y:m:p:sL:h" opt; do
+while getopts ":ca:r:d:y:m:p:sL:U:h" opt; do
     case $opt in
         c) DO_CREATE=1 ;;
         a) 
@@ -461,6 +484,7 @@ while getopts ":ca:r:d:y:m:p:sL:h" opt; do
         y) DO_DELETE_Y=1; TARGET_USER="$OPTARG" ;;
         m) DO_MONITOR=1; TARGET_USER="$OPTARG" ;;
         L) DO_LOCK=1; TARGET_USER="$OPTARG" ;;
+        U) DO_UNLOCK=1; TARGET_USER="$OPTARG" ;;
         p) DO_CHANGE=1; TARGET_USER="$OPTARG" ;;
         s) DO_CHANGE_SHELL=1 ;;
         h) usage; exit 0 ;;
@@ -499,6 +523,9 @@ elif [[ $DO_DELETE -eq 1 ]]; then
 
 elif [[ $DO_LOCK -eq 1 ]]; then
     block_user "$TARGET_USER"
+
+elif [[ $DO_UNLOCK -eq 1 ]]; then
+    unblock_user "$TARGET_USER"
 
 elif [[ $DO_MONITOR -eq 1 ]]; then
     get_info "$TARGET_USER"
