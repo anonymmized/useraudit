@@ -78,6 +78,7 @@ unblock_user() {
         else
             echo "It was not possible to unblock the user. Error code: $err_code"
         fi
+    fi
 }
 
 # ---------- cleanup ----------
