@@ -23,6 +23,8 @@ usage() {
     -s        View the current shell and/or change       
     -m User   Display information on the specified user
     -p User   Change the specified user password
+    -L User   Lock user account
+    -U User   Unlock user account
     -h        Show this page
 EOF
 }
