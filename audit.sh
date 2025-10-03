@@ -54,6 +54,8 @@ block_user() {
     fi
 }
 
+# ---------- unblock_user ----------
+
 unblock_user() {
     local USER="$1"
     if [[ "$OS" == "Darwin" ]]; then
