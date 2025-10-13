@@ -1,20 +1,27 @@
 #!/bin/bash
 
+NC=$'\033[0m'
+RED=$'\033[0;31m'
+PURPLE=$'\033[0;35m'
+CYAN=$'\033[0;36m'
+YELLOW=$'\033[1;33m'
+
 set -Eeuo pipefail
 
 OS="$(uname -s)"
 
 if [[ $EUID -ne 0 ]]; then
-        exec sudo -p "Enter password for script: " -- "$0" "$@"
+    echo -e "${RED}Enter password for script${NC}"
+    exec sudo "$0" "$@"
 fi
 
 # ---------- helpers ----------
 
 usage() {
     cat <<EOF
- Usage:  $0 [-c] [-d USER]
+${YELLOW}Usage:  $0 [-c] [-d USER]
 
- Options:
+Options:
     -c        Create new user (asks name, full name, password)
     -a User   Add the specified user to the group 
     -r User   Remove the specified user from the group    
@@ -25,7 +32,7 @@ usage() {
     -p User   Change the specified user password
     -L User   Lock user account
     -U User   Unlock user account
-    -h        Show this page
+    -h        Show this page${NC}
 EOF
 }
 
