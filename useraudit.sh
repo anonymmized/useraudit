@@ -2,7 +2,7 @@
 
 NC=$'\033[0m'
 RED=$'\033[0;31m'
-PURPLE=$'\033[0;35m'
+PURPLE=$'\033[1;35m'
 CYAN=$'\033[0;36m'
 YELLOW=$'\033[1;33m'
 
@@ -10,10 +10,17 @@ set -Eeuo pipefail
 
 OS="$(uname -s)"
 
-if [[ $EUID -ne 0 ]]; then
-    echo -e "${RED}Enter password for script${NC}"
-    exec sudo "$0" "$@"
-fi
+ORIGINAL_ARGS=("$@")
+
+password_enter() {
+    if [[ $EUID -ne 0 ]]; then
+        if ! sudo -n true 2>/dev/null; then
+            echo -e "${RED}Enter password for script${NC}"
+        fi
+    exec sudo "$0" "${@:-}"
+    exit $?
+    fi
+}
 
 # ---------- helpers ----------
 
@@ -42,23 +49,23 @@ block_user() {
     local USER="$1"
 
     if [[ "$OS" == "Darwin" ]]; then
-        echo "User $USER blocking..."
+        echo -e "${PURPLE}User $USER blocking...${NC}"
         dscl . -append /Users/"$USER" AuthenticationAuthority ";DisabledUser;" 2>/dev/null
         err_code=$(echo $?)
         if [[ $err_code -eq 0 ]]; then
-            echo "Status: Disabled"
+            echo -e "${PURPLE}Status: Disabled${NC}"
         else 
-            echo "It was not possible to block the user. Error code: $err_code"
+            echo -e "${PURPLE}It was not possible to block the user. Error code: $err_code${NC}"
         fi
 
     else 
-        echo "User $USER blocking..."
+        echo -e "${PURPLE}User $USER blocking...${NC}"
         passwd -l "$USER" 2>/dev/null
         err_code=$(echo $?)
         if [[ $err_code -eq 0 ]]; then
-            echo "Status: Disabled"
+            echo -e "${PURPLE}Status: Disabled${NC}"
         else 
-            echo "It was not possible to block the user. Error code: $err_code"
+            echo -e "${PURPLE}It was not possible to block the user. Error code: $err_code${NC}"
         fi
     fi
 }
@@ -68,22 +75,22 @@ block_user() {
 unblock_user() {
     local USER="$1"
     if [[ "$OS" == "Darwin" ]]; then
-        echo "Unlocking user $USER..."
+        echo -e "${PURPLE}Unlocking user $USER...${NC}"
         sudo dscl . -delete /Users/"$USER" AuthenticationAuthority ";DisabledUser;" 2>/dev/null
         err_code=$(echo $?)
         if [[ $err_code -eq 0 ]]; then
-            echo "Status: Unlocked"
+            echo -e "${PURPLE}Status: Unlocked${NC}"
         else 
-            echo "It was not possible to unblock the user. Error code: $err_code"
+            echo -e "${PURPLE}It was not possible to unblock the user. Error code: $err_code${NC}"
         fi
     else
-        echo "Unblocking user $USER..."
+        echo -e "${PURPLE}Unblocking user $USER...${NC}"
         passwd -u "$USER" 2>/dev/null
         err_code=$(echo $?)
         if [[ $err_code -eq 0 ]]; then
-            echo "Status: Unlocked" 
+            echo -e "${PURPLE}Status: Unlocked${NC}" 
         else
-            echo "It was not possible to unblock the user. Error code: $err_code"
+            echo -e "${PURPLE}It was not possible to unblock the user. Error code: $err_code${NC}"
         fi
     fi
 }
@@ -93,7 +100,7 @@ unblock_user() {
 cleanup() {
     set +e 
     trap - INT TERM ERR
-    echo "Cleanup: rolling back partial changes..."
+    echo -e "${PURPLE}Cleanup: rolling back partial changes...${NC}"
 
     [[ -n "${NEW_USER:-}" ]] || exit 0
     [[ -n "${HOME_DIR:-}" ]] || exit 0
@@ -118,10 +125,10 @@ cleanup() {
 # ---------- start ----------
 
 start() {
-    read -r -p "Enter username: " NEW_USER
+    read -r -p "${PURPLE}Enter username: ${NC}" NEW_USER
 
     if id -u "$NEW_USER" >/dev/null 2>&1; then
-        echo "User '$NEW_USER' already exists." >&2
+        echo -e "${PURPLE}User '$NEW_USER' already exists.${NC}" >&2
         return 1
     fi
 
@@ -145,25 +152,25 @@ change_shell() {
     local i=1
     local SHLL
     local cnt=${#available_shells[@]}
-    echo "Active shell: $active_shell"
+    echo -e "${PURPLE}Active shell: $active_shell${NC}"
 
     for shell in "${available_shells[@]}"; do
-        echo "$i - $shell"
+        echo -e "${PURPLE}$i - $shell${NC}"
         ((i++))
     done
 
-    read -r -p "Select the shell number that you want to put: " SHLL
+    read -r -p "${PURPLE}Select the shell number that you want to put: ${NC}" SHLL
     if [[ $SHLL -le $cnt && $SHLL -gt 0 ]]; then
         if [[ "$OS" == "Darwin" ]]; then
             local selected_shell="${available_shells[$((SHLL - 1))]}"
-            echo "A shift in the shell is performed..."
+            echo -e "${PURPLE}A shift in the shell is performed...${NC}"
             chsh -s "$selected_shell"
-            echo "The shell was successfully changed"
+            echo -e "${PURPLE}The shell was successfully changed${NC}"
         else 
             local selected_shell="${available_shells[$((SHLL - 1))]}"
-            echo "A shift in the shell is performed..."
+            echo -e "${PURPLE}A shift in the shell is performed...${NC}"
             chsh -s "$selected_chell"
-            echo "The shell was successfully changed"
+            echo -e "${PURPLE}The shell was successfully changed${NC}"
         fi
     fi
 }
@@ -182,24 +189,24 @@ remove_from_group() {
         ((i++))
     done
 
-    read -r -p "Enter the group number from where you want to delete a specialized user: " GROUPP
+    read -r -p "${PURPLE}Enter the group number from where you want to delete a specialized user: ${NC}" GROUPP
     if [[ "$OS" == "Darwin" ]]; then
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
-            echo "Removing user $USER from group $selected_group..."
+            echo -e "${PURPLE}Removing user $USER from group $selected_group...${NC}"
             dscl . -delete /Groups/"$selected_group" GroupMembership "$USER"
-            echo "User $USER removed from group $selected_group"
+            echo -e "${PURPLE}User $USER removed from group $selected_group${NC}"
         else 
-            echo "Invalid group number"
+            echo -e "${PURPLE}Invalid group number${NC}"
         fi
     else 
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
-            echo "Removing user $USER from group $selected_group"
+            echo -e "${PURPLE}Removing user $USER from group $selected_group${NC}"
             gpasswd -d "$USER" "$selected_group"
-            echo "User $USER removed from group $selected_group"
+            echo -e "${PURPLE}User $USER removed from group $selected_group${NC}"
         else
-            echo "Invalid group number"
+            echo -e "${PURPLE}Invalid group number${NC}"
         fi
         
 
@@ -220,24 +227,24 @@ add_to_group() {
         ((i++))
     done
 
-    read -r -p "Enter the number of the group where you need to add the specified user: " GROUPP
+    read -r -p "${PURPLE}Enter the number of the group where you need to add the specified user: ${NC}" GROUPP
     if [[ "$OS" == "Darwin" ]]; then
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
-            echo "Adding user $USER to group $selected_group..."
+            echo -e "${PURPLE}Adding user $USER to group $selected_group...${NC}"
             dscl . -append /Groups/"$selected_group" GroupMembership "$USER"
-            echo "User $USER added to group $selected_group"
+            echo -e "${PURPLE}User $USER added to group $selected_group${NC}"
         else 
-            echo "Invalid group number"
+            echo -e "${PURPLE}Invalid group number${NC}"
         fi
     else 
         if [[ $GROUPP -le $cnt && $GROUPP -gt 0 ]]; then
             local selected_group="${groups_array[$((GROUPP - 1))]}"
-            echo "Adding user $USER to group $selected_group"
+            echo -e "${PURPLE}Adding user $USER to group $selected_group${NC}"
             usermod -aG "$selected_group" "$USER"
-            echo "User $USER added to group $selected_group"
+            echo -e "${PURPLE}User $USER added to group $selected_group${NC}"
         else 
-            echo "Invalid group number"
+            echo -e "${PURPLE}Invalid group number${NC}"
         fi
     fi
     
@@ -247,15 +254,15 @@ add_to_group() {
 
 create_user() {
     local FULL_NAME PASS PASS2
-    read -r -p "Enter full name: " FULL_NAME
+    read -r -p "${PURPLE}Enter full name: ${NC}" FULL_NAME
     
     local flag=0
     if [[ "$OS" == "Darwin" ]]; then
 
         while [[ $flag -eq 0 ]]; do
-            read -r -s -p "Enter password for new user: " PASS; printf '\n' >&2
+            read -r -s -p "${PURPLE}Enter password for new user: ${NC}" PASS; printf '\n' >&2
             if [[ ${#PASS} -lt 8 ]]; then 
-                read -p "Password too short. \nYou are sure you want to continue with a short password? [Y/n] " ANSWY; printf '\n' >&2
+                read -p "${PURPLE}Password too short. \nYou are sure you want to continue with a short password? [Y/n] ${NC}" ANSWY; printf '\n' >&2
                 case "$ANSWY" in 
                     Y|y|Yes|YES|'')
                         ;;
@@ -263,16 +270,16 @@ create_user() {
                         continue 
                         ;;
                     *)
-                        echo "Invalid input. Please enter Y/y or N/n."
+                        echo -e "${PURPLE}Invalid input. Please enter Y/y or N/n.${NC}"
                         continue
                         ;;
                 esac
             fi
-            read -r -s -p "Enter password again: " PASS2; printf '\n' >&2
+            read -r -s -p "${PURPLE}Enter password again: ${NC}" PASS2; printf '\n' >&2
             if [[ "$PASS" == "$PASS2" ]]; then
                 flag=1
             else 
-                echo "Passwords do not match. Try again"
+                echo -e "${PURPLE}Passwords do not match. Try again${NC}"
             fi
         done
 
@@ -287,33 +294,33 @@ create_user() {
         unset -v PASS PASS2
 
         dseditgroup -o edit -a "$NEW_USER" -t user admin > /dev/null 2>&1
-        echo "User "$NEW_USER" was added to the admin group"
+        echo -e "${PURPLE}User "$NEW_USER" was added to the admin group${NC}"
 
         if id "$NEW_USER" &>/dev/null; then
-            echo "New user '$NEW_USER' at '$HOME_DIR' were created"
+            echo -e "${PURPLE}New user '$NEW_USER' at '$HOME_DIR' were created${NC}"
             return 0
         else
-            echo "Something went wrong"
+            echo -e "${PURPLE}Something went wrong${NC}"
             exit 1
         fi
     else 
         local flag=0
         while [[ $flag -eq 0 ]]; do
-            read -r -s -p "Enter password for new user: " PASS; printf '\n' >&2
+            read -r -s -p "${PURPLE}Enter password for new user: ${NC}" PASS; printf '\n' >&2
             if [[ ${#PASS} -lt 8 ]]; then
-                echo "Password too short"
-                read -e -p "Are you sure you want to continue with a short password? [Y/n]: " ANSWY; printf '\n' >&2
+                echo -e "${PURPLE}Password too short${NC}"
+                read -e -p "${PURPLE}Are you sure you want to continue with a short password? [Y/n]: ${NC}" ANSWY; printf '\n' >&2
                 case "$ANSWY" in 
                     Y|y|Yes|YES|'') ;;
                     N|n|No|NO) continue ;;
-                    *) echo "Invalid input. Please enter Y/y or N/n"; continue ;;
+                    *) echo -e "${PURPLE}Invalid input. Please enter Y/y or N/n${NC}"; continue ;;
                 esac
             fi
-            read -r -s -p "Enter password again: " PASS2; printf '\n' >&2
+            read -r -s -p "${PURPLE}Enter password again: ${NC}" PASS2; printf '\n' >&2
             if [[ "$PASS" == "$PASS2" ]]; then
                 flag=1
             else 
-                echo "Passwords do not match. Try again"
+                echo -e "${PURPLE}Passwords do not match. Try again${NC}"
             fi
         done
         useradd -m -c "$FULL_NAME" -s /bin/bash "$NEW_USER" > /dev/null 2>&1
@@ -329,13 +336,13 @@ create_user() {
         chmod 700 "/home/$NEW_USER" > /dev/null 2>&1
 
         usermod -aG sudo "$NEW_USER" > /dev/null 2>&1
-        echo "User '$NEW_USER' was added to the admin group"
+        echo -e "${PURPLE}User '$NEW_USER' was added to the admin group${NC}"
 
         if id "$NEW_USER" &>/dev/null; then
-            echo "New user '$NEW_USER' at '$HOME_DIR' were created"
+            echo -e "${PURPLE}New user '$NEW_USER' at '$HOME_DIR' were created${NC}"
             return 0
         else 
-            echo "Something went wrong"
+            echo -e "${PURPLE}Something went wrong${NC}"
             exit 1
         fi
     fi
@@ -346,23 +353,23 @@ create_user() {
 change_pass() {
     local USER="$1"
     if [[ -z "$USER" ]]; then
-        echo "You need to specify the user's name"
+        echo -e "${PURPLE}You need to specify the user's name${NC}"
         exit 1
     fi
 
     if [[ "$OS" == "Darwin" ]]; then
         security set-keychain-password /Users/"$USER"/Library/Keychains/login.keychain-db 
         if [[ $? -eq 0 ]]; then
-            echo "Password for user $USER was changed"    
+            echo -e "${PURPLE}Password for user $USER was changed${NC}"    
         else 
-            echo "Something went wrong"
+            echo -e "${PURPLE}Something went wrong${NC}"
         fi
     else 
         passwd "$USER"
         if [[ $? -eq 0 ]]; then
-            echo "Password for user $USER was changed"
+            echo -e "${PURPLE}Password for user $USER was changed${NC}"
         else 
-            echo "Something went wrong"
+            echo -e "${PURPLE}Something went wrong${NC}"
         fi
     fi
 }
@@ -372,54 +379,54 @@ change_pass() {
 get_info() {
     local USER="$1"
     if [[ -z "$USER" ]]; then
-        echo "You need to specify the user's name"
+        echo -e "${PURPLE}You need to specify the user's name${NC}"
         exit 1
     fi
-    echo "Username : $USER"
+    echo -e "${PURPLE}Username : $USER${NC}"
     uid=$(id -u "$USER")
-    echo "UID : $uid"
+    echo -e "${PURPLE}UID : $uid${NC}"
     gid=$(id -g "$USER")
-    echo "GID : $gid"
+    echo -e "${PURPLE}GID : $gid${NC}"
     if [[ "$OS" == "Darwin" ]]; then
         user_name=$(dscl . -read /Users/"$USER" | grep RealName | awk -F': ' '{print $2}' | sed 's/^ *//')
-        echo "Name : $user_name"
+        echo -e "${PURPLE}Name : $user_name${NC}"
         home_dir=$(dscl . -read /Users/"$USER" | grep NFSHomeDirectory | awk -F': ' '{print $2}' | sed 's/^ *//')
-        echo "Home directory : $home_dir"
+        echo -e "${PURPLE}Home directory : $home_dir${NC}"
         shell_name=$(dscl . -read /Users/"$USER" | grep UserShell | awk -F': ' '{print $3}' | sed 's/^ *//')
-        echo "Shell : $shell_name"
+        echo -e "${PURPLE}Shell : $shell_name${NC}"
         grps=$(groups "$USER")
-        echo "Additional $USER's groups : $grps"
+        echo -e "${PURPLE}Additional $USER's groups : $grps${NC}"
         last_login=$(last -1 "$USER" 2>/dev/null | head -1 | awk '{print $4, $5, $6, $7, $8}' | sed 's/^ *//')
         if [[ -n "$last_login" && "$last_login" != "never" ]]; then
-            echo "Last login : $last_login"
+            echo -e "${PURPLE}Last login : $last_login${NC}"
         else 
-            echo "Last login : never logged in"
+            echo -e "${PURPLE}Last login : never logged in${NC}"
         fi
     else 
         user_name=$(finger "$USER" | grep Name | awk -F': ' '{print $3}')
-        echo "Name : $user_name"
+        echo -e "${PURPLE}Name : $user_name${NC}"
         home_dir=$(finger "$USER" | grep Directory | awk -F': ' '{print $2}' | awk -F' ' '{print $1}')
-        echo "Home directory : $home_dir"
+        echo -e "${PURPLE}Home directory : $home_dir${NC}"
         shell_name=$(finger "$USER" | grep Shell | awk -F': ' '{print $3}')
-        echo "Shell : $shell_name"
+        echo -e "${PURPLE}Shell : $shell_name${NC}"
         grps=$(groups "$USER" | awk -F' : ' '{print $2}')
-        echo "Additional $USER's groups : $grps"
+        echo -e "${PURPLE}Additional $USER's groups : $grps${NC}"
         if [[ -f /.dockerenv ]] || [[ -n "${container:-}" ]] || [[ ! -f /var/log/wtmp ]]; then
-            echo "Last login : not available (running in container)"
+            echo -e "${PURPLE}Last login : not available (running in container)${NC}"
         else
             last_login_last=$(finger "$USER" 2>/dev/null | grep Last | awk '{print $4, $5}')
             last_login_on=$(finger "$USER" 2>/dev/null | grep since | awk '{print $4, $5}')
             
             if [[ -n "$last_login_last" && "$last_login_last" != "" ]]; then
-                echo "Last login : $last_login_last"
+                echo -e "${PURPLE}Last login : $last_login_last${NC}"
             elif [[ -n "$last_login_on" && "$last_login_on" != "" ]]; then
-                echo "Last login : $last_login_on"
+                echo -e "${PURPLE}Last login : $last_login_on${NC}"
             else
                 last_login_alt=$(last -1 "$USER" 2>/dev/null | head -1 | awk '{print $4, $5, $6, $7, $8}' | sed 's/^ *//')
                 if [[ -n "$last_login_alt" && "$last_login_alt" != "never" && "$last_login_alt" != "" ]]; then
-                    echo "Last login : $last_login_alt"
+                    echo -e "${PURPLE}Last login : $last_login_alt${NC}"
                 else
-                    echo "Last login : never logged in"
+                    echo -e "${PURPLE}Last login : never logged in${NC}"
                 fi
             fi
         fi
@@ -431,32 +438,32 @@ get_info() {
 delete_user() {
     local USER="$1"
     if [[ -z "$USER" ]]; then
-        echo "You need to specify the user's name"
+        echo -e "${PURPLE}You need to specify the user's name${NC}"
         exit 1
     fi
     
     if [[ "$OS" == "Darwin" ]]; then
         local HOME_DIR_DEL="/Users/$USER"
         if id -u "$USER" >/dev/null 2>&1; then
-            echo "Removing user..."
-            echo "Removing from sudoers..."
-            echo "-------------------------"
+            echo -e "${RED}Removing user...${NC}"
+            echo -e "${RED}Removing from sudoers...${NC}"
+            echo -e "${CYAN}-------------------------${NC}"
             /usr/sbin/sysadminctl -deleteUser "$USER" -secure > /dev/null 2>&1
         fi
         if [[ -d "$HOME_DIR_DEL" && "$HOME_DIR_DEL" == /Users/* ]]; then
-            echo "Removing the home directory..."
+            echo -e "${RED}Removing the home directory...${NC}"
             rm -rf "$HOME_DIR_DEL" > /dev/null 2>&1
         fi
-        echo "Deleted user: '$USER'"
+        echo -e "${RED}Deleted user: '$USER'${NC}"
     else 
         if id -u "$USER" >/dev/null 2>&1; then
             userdel -f -r "$USER" > /dev/null 2>&1
-            echo "Removing the home directory..."
-            echo "-------------------------"
-            echo "Removing from sudoers..."
-            echo "Removing user..."
+            echo -e "${RED}Removing the home directory...${NC}"
+            echo -e "${CYAN}-------------------------${NC}"
+            echo -e "${RED}Removing from sudoers...${NC}"
+            echo -e "${RED}Removing user...${NC}"
         fi
-        echo "Deleted user: '$USER'"
+        echo -e "${NC}Deleted user: '$USER'${NC}"
     fi 
 }
 
@@ -495,20 +502,30 @@ while getopts ":ca:r:d:y:m:p:sL:U:h" opt; do
         p) DO_CHANGE=1; TARGET_USER="$OPTARG" ;;
         s) DO_CHANGE_SHELL=1 ;;
         h) usage; exit 0 ;;
-        \?) echo "Bad option: -$OPTARG" >&2; usage; exit 1 ;;
-        :) echo "Option -$OPTARG requires an argument" >&2; usage; exit 1 ;;
+        \?) echo -e "${RED}Bad option: -$OPTARG${NC}" >&2; usage; exit 1 ;;
+        :) echo -e "${RED}Option -$OPTARG requires an argument${NC}" >&2; usage; exit 1 ;;
     esac
 done
 shift $((OPTIND - 1))
 
+NEED_SUDO=0
+if [[ $DO_CREATE -eq 1 || $DO_DELETE -eq 1 || $DO_DELETE_Y -eq 1 || $DO_LOCK -eq 1 || $DO_UNLOCK -eq 1 || $DO_ADD_T_GROUP -eq 1 || $DO_REMOVE_GROUP -eq 1 || $DO_CHANGE -eq 1 || $DO_CHANGE_SHELL -eq 1 ]]; then
+    NEED_SUDO=1
+fi
+
+# Только если действительно нужна привилегия — запрашиваем пароль (и перезапускаем через sudo с оригинальными аргументами)
+if [[ $NEED_SUDO -eq 1 ]]; then
+    password_enter "${ORIGINAL_ARGS[@]}"
+fi
+
 if [[ $DO_CREATE -eq 1 && ( $DO_DELETE -eq 1 || $DO_DELETE_Y -eq 1 ) ]]; then
-    echo "You cannot use -c and -d/-y simultaneously" >&2
+    echo -e "${RED}You cannot use -c and -d/-y simultaneously${NC}" >&2
     usage
     exit 1
 fi
 
 if [[ $DO_DELETE -eq 1 && $DO_DELETE_Y -eq 1 ]]; then
-    echo "Choose one option -d or -y" >&2
+    echo -e "${RED}Choose one option -d or -y${NC}" >&2
     usage
     exit 1
 fi
@@ -517,11 +534,11 @@ if [[ $DO_CREATE -eq 1 ]]; then
     start
     create_user
 elif [[ $DO_DELETE -eq 1 ]]; then
-    read -p "Are you really sure about deleting user '$TARGET_USER'? [Y/n] " ANS; printf '\n'>&2
+    read -p "${PURPLE}Are you really sure about deleting user '$TARGET_USER'? [Y/n] ${NC}" ANS; printf '\n'>&2
     case "$ANS" in 
         Y|y|Yes|YES|'') delete_user "$TARGET_USER" ;;
-        N|n|No|NO) echo "Exiting from the program"; exit 0 ;;
-        *) echo "Bad answer"; exit 1 ;;
+        N|n|No|NO) echo -e "${PURPLE}Exiting from the program${NC}"; exit 0 ;;
+        *) echo -e "${RED}Bad answer${NC}"; exit 1 ;;
     esac
 
 elif [[ $DO_LOCK -eq 1 ]]; then
